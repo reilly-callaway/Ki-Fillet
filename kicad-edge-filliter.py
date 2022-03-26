@@ -7,13 +7,12 @@ def isBoardEdge(edge):
 
 def findCoincidentPoint(line1, line2):
     # Find the coincident point
-    touchingPoint = []
     if (line1.GetStartX() == line2.GetStartX() and line1.GetStartY() == line2.GetStartY()) or \
         (line1.GetStartX() == line2.GetEndX() and line1.GetStartY() == line2.GetEndY()):
-        return (line1.GetStartX(), line1.GetStartY())
+        return pcbnew.wxPoint(line1.GetStartX(), line1.GetStartY())
     elif (line1.GetEndX() == line2.GetStartX() and line1.GetEndY() == line2.GetStartY()) or \
         (line1.GetEndX() == line2.GetEndX() and line1.GetEndY() == line2.GetEndY()):
-        return (line1.GetEndX(), line1.GetEndY())
+        return pcbnew.wxPoint(line1.GetEndX(), line1.GetEndY())
     else:
         return None
 
@@ -21,37 +20,21 @@ def flipLine(line):
     startX = line.GetStartX()
     startY = line.GetStartY()
     line.SetStart(line.GetEnd())
-    line.SetEndX(startX)
-    line.SetEndY(startY)
-    
-def shortenLine(line, touchingX, touchingY, radius):
-    # Force the touching point to be at the "start" of the line
-    if line.GetEndX() == touchingX and line.GetEndY() == touchingY:
+    line.SetEnd(pcbnew.wxPoint(startX, startY))
+
+def shortenLine(line, touchingPoint, distance):
+    # Force the touching point to be at the "end" of the line
+    if line.GetStart() == touchingPoint:
         flipLine(line)
 
-    # Ensure our lines touch
-    if line.GetStartX() == touchingX and line.GetStartY() == touchingY:
-        # Shorten the start of the line
-        # We need to reduce the line by radius, in the same direction as the line
-        
-        if line.GetEndX() == touchingX:
-            # Shorten the start, strictly in the Y direction
-            if line.GetStartY() > line.GetEndY():
-                line.SetStartY(line.GetStartY() - radius)
-            else:
-                line.SetStartY(line.GetStartY() + radius)
-            return (1, line.GetStart())
-        elif line.GetEndY() == touchingY:
-            # Shorten the start, strictly in the X direction
-            if line.GetStartX() > line.GetEndX():
-                line.SetStartX(line.GetStartX() - radius)
-            else:
-                line.SetStartX(line.GetStartX() + radius)
-        else:
-            print("Oops, haven't implimented this case yet, too much math for this late")
-        return (2, line.GetStart())
-    else:
-        return (0, line.GetStart())
+    # Check we're actually at the end
+    if line.GetEnd() == touchingPoint:
+        # We need to reduce the line by distance, in the same direction as the line
+        dirn = norm_vector(line.GetEnd() - line.GetStart(), length=distance)
+        line.SetEnd(line.GetEnd() - dirn)
+
+        return (dirn, line.GetEnd())
+    return (None, None)
 
 def dot(a, b):
     # Dot product of two wxPoints (treated as vectors)
@@ -61,47 +44,79 @@ def mag(point):
     # Magnitude of wxPoint (treated as a vector)
     return math.sqrt(point.x**2 + point.y**2)
 
+def det(a, b):
+    # Determinant of wxPoint (treasted as a vector)
+    return (a.x * b.y) - (a.y * b.x)
+
+def norm_vector(point, length=1):
+    # Return a new normalised wxPoint (treated as a vector)
+    # Can optionally multiply by a const
+    return pcbnew.wxPoint(length * point.x / mag(point), length * point.y / mag(point))
+
 def findAngle(a, b):
     # Find the angle between two vectors
-    return math.degrees(math.acos(dot(a, b) / mag(a) * mag(b)))
+    return math.degrees(math.acos(dot(a, b) / (mag(a) * mag(b))))
+
+def findAngleSigned(a, b):
+    return math.degrees(math.atan2(det(a, b), dot(a, b)))
+
+def sign(x):
+    if x > 0:
+        return 1
+    elif x < 0:
+        return -1
+    else:
+        return 0
 
 def drawArc(centre, start, end):
-    # Draw the shortest arc between start to end, with a given centre
+    """
+    Draw the shortest arc between start to end, with a given centre
+    """
     arc = pcbnew.PCB_SHAPE(board)
     arc.SetShape(pcbnew.S_ARC)
+    arc.SetLayer(pcbnew.Edge_Cuts)
     arc.SetCenter(centre)
-
     arc.SetStart(start)
     arc.SetEnd(end)
 
-    if findAngle(end - centre, start-centre)*10 != arc.GetArcAngle():
+    # Flip the start and end if the arc produced isn't the shortest possible
+    if round(findAngle(end - centre, start-centre)*10, 2) != round(arc.GetArcAngle(), 2):
         arc.SetStart(end)
         arc.SetEnd(start)
 
-    arc.SetLayer(pcbnew.Edge_Cuts)
     board.Add(arc)
 
-def addFillet(line1, line2, radius, touchingX, touchingY):
+def addFillet(line1, line2, radius, touchingPoint):
     """
     Shortens two coincident lines, and adds an arc of a given radius between them
     """
 
-    dirn1, start = shortenLine(line1, touchingX, touchingY, radius)
-    dirn2, end = shortenLine(line2, touchingX, touchingY, radius)
-    
-    arcCentre = pcbnew.wxPoint(0, 0)
+    # Ensure the ends are at the touching point for consistency
+    if line1.GetStart() == touchingPoint:
+        flipLine(line1)
+    if line2.GetStart() == touchingPoint:
+        flipLine(line2)
 
-    if dirn1 == 1 and dirn2 == 2:
-        arcCentre.x = line2.GetStartX()
-        arcCentre.y = line1.GetStartY()
-    elif dirn1 == 2 and dirn2 == 1:
-        arcCentre.x = line1.GetStartX()
-        arcCentre.y = line2.GetStartY()
-    else:
-        return False # idk something went wrong
+    # Calculate distance required to shorten each line by given the radius of the fillet
+    angle = findAngle(line1.GetStart() - touchingPoint, line2.GetStart() - touchingPoint)
+    distance = radius / math.tan(math.radians(angle / 2))
+
+    # Shorten the lines, getting the direction as a vector that the line was reduced in
+    dirn1, start = shortenLine(line1, touchingPoint, distance)
+    dirn2, end = shortenLine(line2, touchingPoint, distance)
+
+    # Now we calculate the centre of the arc
+    # We will use the direction the (start) line was reduced in, rotate it 90deg towards the other line, scale it by the radius, and then add to the start
+    dirn1 = norm_vector(dirn1, length=radius)
+    # Find the direction we need to rotate
+    rotDirn = sign(findAngleSigned(dirn1, dirn2))
+    
+    # Rotate 90 degrees, towards the end
+    dirn1Rot = pcbnew.wxPoint(rotDirn*dirn1.y, -1*rotDirn*dirn1.x)
+
+    arcCentre = start + dirn1Rot
 
     drawArc(arcCentre, start, end)
-    return True
 
 def rectToLines(rect):
     """
@@ -133,18 +148,11 @@ for drawing in board.GetDrawings():
         elif drawing.ShowShape() == "Line":
             edges.append(drawing)
 
-# We have several cases to deal with depending on the shape:
-#   * Rect - Locate corner points, convert to lines, treat as lines case but you already know the corners
-#   * Polygon - Same as Rect, but corners are harder, and determing how to fillet will also be harder (Not supported for now...)
-#   * Lines - Find any "pairs" that just touch the ends, add fillet
-
 for i in range(len(edges)):
     for j in range(i+1, len(edges)):
         point = findCoincidentPoint(edges[i], edges[j])
         if point:
-            addFillet(edges[i], edges[j], fillet_radius, point[0], point[1])
-
+            addFillet(edges[i], edges[j], fillet_radius, point)
 
 new_board_name = args.board[:-10] + "_fillet.kicad_pcb"
 board.Save(new_board_name)
-# board.Save(args.board)
