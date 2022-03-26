@@ -127,6 +127,7 @@ def rectToLines(rect):
 parser = argparse.ArgumentParser()
 
 parser.add_argument("board", help="Input .kicad_pcb file")
+parser.add_argument("-o", "--output", help="Output .kicad_pcb file. Will overwrite the input file if not specified")
 parser.add_argument("-r", "--radius", help="Radius of the corner edge", default=2.0, type=float)
 
 args = parser.parse_args()
@@ -154,5 +155,8 @@ for i in range(len(edges)):
         if point:
             addFillet(edges[i], edges[j], fillet_radius, point)
 
-new_board_name = args.board[:-10] + "_fillet.kicad_pcb"
-board.Save(new_board_name)
+if (args.output):
+    board.Save(args.output)
+else:
+    board.Save(args.board)
+
