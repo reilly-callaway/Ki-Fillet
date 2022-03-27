@@ -68,7 +68,7 @@ def sign(x):
     else:
         return 0
 
-def drawArc(centre, start, end):
+def drawArc(board, centre, start, end):
     """
     Draw the shortest arc between start to end, with a given centre
     """
@@ -86,7 +86,7 @@ def drawArc(centre, start, end):
 
     board.Add(arc)
 
-def addFillet(line1, line2, radius, touchingPoint):
+def addFillet(board, line1, line2, radius, touchingPoint):
     """
     Shortens two coincident lines, and adds an arc of a given radius between them
     """
@@ -99,6 +99,11 @@ def addFillet(line1, line2, radius, touchingPoint):
 
     # Calculate distance required to shorten each line by given the radius of the fillet
     angle = findAngle(line1.GetStart() - touchingPoint, line2.GetStart() - touchingPoint)
+
+    # If lines are parallel, no fillet needed, just return
+    if round(angle, 2) == 180.00:
+        return
+
     distance = radius / math.tan(math.radians(angle / 2))
 
     # Shorten the lines, getting the direction as a vector that the line was reduced in
@@ -116,7 +121,7 @@ def addFillet(line1, line2, radius, touchingPoint):
 
     arcCentre = start + dirn1Rot
 
-    drawArc(arcCentre, start, end)
+    drawArc(board, arcCentre, start, end)
 
 def rectToLines(rect):
     """
@@ -124,39 +129,59 @@ def rectToLines(rect):
     """
     return
 
-parser = argparse.ArgumentParser()
+def findBoardEdges(board):
+    lines = []
+    for drawing in board.GetDrawings():
+        if isBoardEdge(drawing):
 
-parser.add_argument("board", help="Input .kicad_pcb file")
-parser.add_argument("-o", "--output", help="Output .kicad_pcb file. Will overwrite the input file if not specified")
-parser.add_argument("-r", "--radius", help="Radius of the corner edge", default=2.0, type=float)
+            if drawing.ShowShape() == "Rect":
+                # Convert a rectangle into a bunch of lines and add them to the list of edges
+                pass
+            elif drawing.ShowShape() == "Polygon":
+                # Convert polygon to a bunch of lines and add them to the list of edges
+                pass
+            elif drawing.ShowShape() == "Line":
+                lines.append(drawing)
+    return lines
 
-args = parser.parse_args()
 
-fillet_radius = int(args.radius * 1000000)
+def filletBoard(board, radius):
+    edges = []
+    for drawing in board.GetDrawings():
+        if isBoardEdge(drawing):
 
-board = pcbnew.LoadBoard(args.board)
+            if drawing.ShowShape() == "Rect":
+                # TODO: Convert a rectangle into a bunch of lines and add them to the list of edges
+                pass
+            elif drawing.ShowShape() == "Polygon":
+                # TODO: Convert polygon to a bunch of lines and add them to the list of edges
+                pass
+            elif drawing.ShowShape() == "Line":
+                edges.append(drawing)
 
-edges = []
-for drawing in board.GetDrawings():
-    if isBoardEdge(drawing):
+    for i in range(len(edges)):
+        for j in range(i+1, len(edges)):
+            point = findCoincidentPoint(edges[i], edges[j])
+            if point:
+                addFillet(edges[i], edges[j], radius, point)
 
-        if drawing.ShowShape() == "Rect":
-            # Convert a rectangle into a bunch of lines and add them to the list of edges
-            pass
-        elif drawing.ShowShape() == "Polygon":
-            # Convert polygon to a bunch of lines and add them to the list of edges
-            pass
-        elif drawing.ShowShape() == "Line":
-            edges.append(drawing)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
 
-for i in range(len(edges)):
-    for j in range(i+1, len(edges)):
-        point = findCoincidentPoint(edges[i], edges[j])
-        if point:
-            addFillet(edges[i], edges[j], fillet_radius, point)
+    parser.add_argument("board", help="Input .kicad_pcb file")
+    parser.add_argument("-o", "--output", help="Output .kicad_pcb file. Will overwrite the input file if not specified")
+    parser.add_argument("-r", "--radius", help="Radius of the corner edge", default=2.0, type=float)
 
-if (args.output):
-    board.Save(args.output)
-else:
-    board.Save(args.board)
+    args = parser.parse_args()
+
+    fillet_radius = int(args.radius * 1000000)
+
+    board = pcbnew.LoadBoard(args.board)
+
+    filletBoard(board, fillet_radius)
+
+    if (args.output):
+        board.Save(args.output)
+    else:
+        board.Save(args.board)
 
