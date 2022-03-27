@@ -1,0 +1,37 @@
+{
+    "$schema": "https://go.kicad.org/pcm/schemas/v1",
+    "name": "Ki-Fillet",
+    "description": "Fillet board edges.",
+    "description_full": "Automatically apply a rounded fillet of a given radius to all board edges on the edge cuts layer.",
+    "identifier": "com.github.reilly-callaway.Ki-Fillet",
+    "type": "plugin",
+    "author": {
+        "name": "Reilly Callaway",
+        "contact": {
+            "github": "https://github.com/reilly-callaway"
+        }
+    },
+    "license": "GPL-3.0",
+    "resources": {
+        "homepage": "https://github.com/reilly-callaway/Ki-Fillet"
+    },
+    "tags": [
+        "pcbnew",
+        "board",
+        "fillet"
+    ],
+    "versions": [ 
+        {
+            "version": "1.0.0",
+            "status": "stable",
+            "kicad_version": "6.0",
+            "kicad_version_max": "6.1",
+            "platforms": [
+                "linux",
+                "macos",
+                "windows"
+            ]
+        }
+    ]
+}
+

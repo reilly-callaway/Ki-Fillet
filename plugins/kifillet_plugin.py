@@ -3,7 +3,7 @@
 import pcbnew
 import os
 import wx
-from kifillet import filletBoard
+from .kifillet import filletBoard
 
 class FilletDialog(wx.Dialog):
     def __init__(self, parent=None, board=None, options=None):
@@ -90,7 +90,7 @@ class KiFilletPlugin(pcbnew.ActionPlugin):
         self.category = "Ki-Fillet"
         self.description = "Add fillets to board edges"
         self.show_toolbar_button = True
-        self.icon_file_name = os.path.join(os.path.dirname(__file__), 'icon_24x24.png')
+        self.icon_file_name = os.path.join(os.path.dirname(__file__), 'kifillet_icon.png')
 
     def Run(self):
         try:

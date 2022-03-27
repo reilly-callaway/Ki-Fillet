@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import pcbnew
-import argparse
 import math
 
 def isBoardEdge(edge):
@@ -165,9 +164,10 @@ def filletBoard(board, radius):
         for j in range(i+1, len(edges)):
             point = findCoincidentPoint(edges[i], edges[j])
             if point:
-                addFillet(edges[i], edges[j], radius, point)
+                addFillet(board, edges[i], edges[j], radius, point)
 
 if __name__ == "__main__":
+    import argparse
     parser = argparse.ArgumentParser()
 
     parser.add_argument("board", help="Input .kicad_pcb file")
