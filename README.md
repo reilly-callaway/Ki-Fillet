@@ -1,5 +1,6 @@
 # Ki-Fillet
 ![Ki-Fillet Logo](https://github.com/reilly-callaway/ki-fillet/raw/master/resources/icon.png)
+
 KiCAD PcbNew Plugin and CLI to automatically apply a rounded fillet of a given radius to all board edges of a PCB.
 
 ![Ki-Fillet example](https://github.com/reilly-callaway/ki-fillet/raw/master/resources/example.png)
