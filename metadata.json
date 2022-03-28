@@ -22,8 +22,8 @@
     ],
     "versions": [ 
         {
-            "version": "1.0.0",
-            "status": "stable",
+            "version": "0.1.0",
+            "status": "development",
             "kicad_version": "6.0",
             "platforms": [
                 "linux",
