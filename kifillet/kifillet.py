@@ -134,31 +134,48 @@ def findBoardEdges(board):
     lines = []
     for drawing in board.GetDrawings():
         if isBoardEdge(drawing):
-
+            # Rectangles
             if drawing.ShowShape() == "Rect":
-                # Convert a rectangle into a bunch of lines and add them to the list of edges
+                
                 pass
+            # Polygons
             elif drawing.ShowShape() == "Polygon":
                 # Convert polygon to a bunch of lines and add them to the list of edges
-                pass
+                layer = drawing.GetLayer()
+                lineWidth = drawing.GetWidth()
+                polyShape = drawing.GetPolyShape()
+
+                for outlineIndex in range(polyShape.OutlineCount()):
+                    outline = polyShape.Outline(outlineIndex)
+                    for pointIndex in range(outline.PointCount()):
+                        point = outline.GetPoint(pointIndex)
+                        
+                        if pointIndex+1 >= outline.PointCount():
+                            nextPoint = outline.GetPoint(0)
+                        else:
+                            nextPoint = outline.GetPoint(pointIndex+1)
+                        
+                        # Construct line from point to next point
+                        seg = pcbnew.PCB_SHAPE()
+                        seg.SetShape(pcbnew.SHAPE_T_SEGMENT)
+
+                        seg.SetStart(pcbnew.wxPoint(point.x, point.y))
+                        seg.SetEnd(pcbnew.wxPoint(nextPoint.x, nextPoint.y))
+
+                        seg.SetLayer(layer)
+                        seg.SetWidth(lineWidth)
+
+                        board.Add(seg)
+                        lines.append(seg)
+                board.Remove(drawing)
+            # Line segments
             elif drawing.ShowShape() == "Line":
                 lines.append(drawing)
     return lines
 
 
 def filletBoard(board, radius):
-    edges = []
-    for drawing in board.GetDrawings():
-        if isBoardEdge(drawing):
-
-            if drawing.ShowShape() == "Rect":
-                # TODO: Convert a rectangle into a bunch of lines and add them to the list of edges
-                pass
-            elif drawing.ShowShape() == "Polygon":
-                # TODO: Convert polygon to a bunch of lines and add them to the list of edges
-                pass
-            elif drawing.ShowShape() == "Line":
-                edges.append(drawing)
+    edges = findBoardEdges(board)
 
     for i in range(len(edges)):
         for j in range(i+1, len(edges)):
