@@ -124,41 +124,64 @@ def addFillet(board, line1, line2, radius, touchingPoint):
 
     drawArc(board, arcCentre, start, end)
 
-def rectToLines(rect):
+def makeLinesFromPoints(points, width, layer=pcbnew.Edge_Cuts):
     """
-    Converts a rectangle to four lines
-    """
-    return
+    Given a list of points, create a list of lines between them
+    """          
+    lines = []
+    for i in range(len(points) - 1):
+        seg = pcbnew.PCB_SHAPE()
+        seg.SetShape(pcbnew.SHAPE_T_SEGMENT)
+
+        seg.SetStart(points[i])
+        seg.SetEnd(points[i + 1])
+
+        seg.SetLayer(layer)
+        seg.SetWidth(width)
+
+        lines.append(seg)
+    return lines
 
 def findBoardEdges(board):
     lines = []
     for drawing in board.GetDrawings():
         if isBoardEdge(drawing):
+            # Rectangles
+            if drawing.GetShape() == pcbnew.SHAPE_T_RECT:
+                lineWidth = drawing.GetWidth()
 
-            if drawing.ShowShape() == "Rect":
-                # Convert a rectangle into a bunch of lines and add them to the list of edges
-                pass
-            elif drawing.ShowShape() == "Polygon":
+                points = list(drawing.GetRectCorners())
+                points.append(points[0])
+
+                for seg in makeLinesFromPoints(points, lineWidth):
+                    board.Add(seg)
+                    lines.append(seg)
+                board.Remove(drawing)
+            # Polygons
+            elif drawing.GetShape() == pcbnew.SHAPE_T_POLY:
                 # Convert polygon to a bunch of lines and add them to the list of edges
-                pass
-            elif drawing.ShowShape() == "Line":
+                lineWidth = drawing.GetWidth()
+                polyShape = drawing.GetPolyShape()
+
+                # Iterate over the "outlines", just in case there are multiple
+                for outlineIndex in range(polyShape.OutlineCount()):
+                    outline = polyShape.Outline(outlineIndex)
+                    points = list(outline.CPoints())
+                    # Convert to wxPoint from VECTOR2I
+                    points = [pcbnew.wxPoint(p.x, p.y) for p in points]
+                    points.append(points[0])
+                    for seg in makeLinesFromPoints(points, lineWidth):
+                        board.Add(seg)
+                        lines.append(seg)
+                board.Remove(drawing)
+            # Line segments
+            elif drawing.GetShape() == pcbnew.SHAPE_T_SEGMENT:
                 lines.append(drawing)
     return lines
 
 
 def filletBoard(board, radius):
-    edges = []
-    for drawing in board.GetDrawings():
-        if isBoardEdge(drawing):
-
-            if drawing.ShowShape() == "Rect":
-                # TODO: Convert a rectangle into a bunch of lines and add them to the list of edges
-                pass
-            elif drawing.ShowShape() == "Polygon":
-                # TODO: Convert polygon to a bunch of lines and add them to the list of edges
-                pass
-            elif drawing.ShowShape() == "Line":
-                edges.append(drawing)
+    edges = findBoardEdges(board)
 
     for i in range(len(edges)):
         for j in range(i+1, len(edges)):
