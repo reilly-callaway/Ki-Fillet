@@ -124,52 +124,58 @@ def addFillet(board, line1, line2, radius, touchingPoint):
 
     drawArc(board, arcCentre, start, end)
 
-def rectToLines(rect):
+def makeLinesFromPoints(points, width, layer=pcbnew.Edge_Cuts):
     """
-    Converts a rectangle to four lines
-    """
-    return
+    Given a list of points, create a list of lines between them
+    """          
+    lines = []
+    for i in range(len(points) - 1):
+        seg = pcbnew.PCB_SHAPE()
+        seg.SetShape(pcbnew.SHAPE_T_SEGMENT)
+
+        seg.SetStart(points[i])
+        seg.SetEnd(points[i + 1])
+
+        seg.SetLayer(layer)
+        seg.SetWidth(width)
+
+        lines.append(seg)
+    return lines
 
 def findBoardEdges(board):
     lines = []
     for drawing in board.GetDrawings():
         if isBoardEdge(drawing):
             # Rectangles
-            if drawing.ShowShape() == "Rect":
-                
-                pass
+            if drawing.GetShape() == pcbnew.SHAPE_T_RECT:
+                lineWidth = drawing.GetWidth()
+
+                points = list(drawing.GetRectCorners())
+                points.append(points[0])
+
+                for seg in makeLinesFromPoints(points, lineWidth):
+                    board.Add(seg)
+                    lines.append(seg)
+                board.Remove(drawing)
             # Polygons
-            elif drawing.ShowShape() == "Polygon":
+            elif drawing.GetShape() == pcbnew.SHAPE_T_POLY:
                 # Convert polygon to a bunch of lines and add them to the list of edges
-                layer = drawing.GetLayer()
                 lineWidth = drawing.GetWidth()
                 polyShape = drawing.GetPolyShape()
 
+                # Iterate over the "outlines", just in case there are multiple
                 for outlineIndex in range(polyShape.OutlineCount()):
                     outline = polyShape.Outline(outlineIndex)
-                    for pointIndex in range(outline.PointCount()):
-                        point = outline.GetPoint(pointIndex)
-                        
-                        if pointIndex+1 >= outline.PointCount():
-                            nextPoint = outline.GetPoint(0)
-                        else:
-                            nextPoint = outline.GetPoint(pointIndex+1)
-                        
-                        # Construct line from point to next point
-                        seg = pcbnew.PCB_SHAPE()
-                        seg.SetShape(pcbnew.SHAPE_T_SEGMENT)
-
-                        seg.SetStart(pcbnew.wxPoint(point.x, point.y))
-                        seg.SetEnd(pcbnew.wxPoint(nextPoint.x, nextPoint.y))
-
-                        seg.SetLayer(layer)
-                        seg.SetWidth(lineWidth)
-
+                    points = list(outline.CPoints())
+                    # Convert to wxPoint from VECTOR2I
+                    points = [pcbnew.wxPoint(p.x, p.y) for p in points]
+                    points.append(points[0])
+                    for seg in makeLinesFromPoints(points, lineWidth):
                         board.Add(seg)
                         lines.append(seg)
                 board.Remove(drawing)
             # Line segments
-            elif drawing.ShowShape() == "Line":
+            elif drawing.GetShape() == pcbnew.SHAPE_T_SEGMENT:
                 lines.append(drawing)
     return lines
 
