@@ -196,10 +196,15 @@ if __name__ == "__main__":
     parser.add_argument("board", help="Input .kicad_pcb file")
     parser.add_argument("-o", "--output", help="Output .kicad_pcb file. Will overwrite the input file if not specified")
     parser.add_argument("-r", "--radius", help="Radius of the corner edge", default=2.0, type=float)
+    parser.add_argument("-u", "--units", help="Units (mm, in)", default="mm", choices=["mm", "in"])
 
     args = parser.parse_args()
 
-    fillet_radius = int(args.radius * 1000000)
+    radius_multiplier = 1000000
+    if args.units == "in":
+        radius_multiplier *= 25.4
+
+    fillet_radius = int(args.radius * radius_multiplier)
 
     board = pcbnew.LoadBoard(args.board)
 

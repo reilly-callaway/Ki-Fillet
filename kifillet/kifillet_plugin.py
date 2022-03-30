@@ -5,6 +5,8 @@ import os
 import wx
 from .kifillet import filletBoard
 
+UNITS = ["mm", "in"]
+
 class FilletDialog(wx.Dialog):
     def __init__(self, parent=None, board=None, options=None):
         wx.Dialog.__init__(
@@ -28,9 +30,20 @@ class FilletDialog(wx.Dialog):
         self.Centre()
 
     def _buildOptions(self, parentSizer):
+        unitsBox = wx.BoxSizer(wx.HORIZONTAL)
+
+        unitsText = wx.StaticText(self, label="Units:")
+        unitsBox.Add(unitsText, 0, wx.ALL | wx.LEFT | wx.ALIGN_CENTRE_VERTICAL, 5)
+
+        self.unitsSelect = wx.Choice(self, choices=UNITS, name="Units")
+        self.unitsSelect.SetSelection(0)
+        self.Bind(wx.EVT_CHOICE, self.OnUnitsChange, id=self.unitsSelect.GetId())
+        unitsBox.Add(self.unitsSelect, 0, wx.ALL | wx.RIGHT | wx.ALIGN_CENTRE_VERTICAL | wx.EXPAND, 5)
+        parentSizer.Add(unitsBox, 0, wx.ALL | wx.EXPAND, 10)
+
         radiusBox = wx.BoxSizer(wx.HORIZONTAL)
         radiusText = wx.StaticText(self, label="Radius:")
-        radiusBox.Add(radiusText, 0, wx.ALL |wx.LEFT | wx.ALIGN_CENTRE_VERTICAL, 5)
+        radiusBox.Add(radiusText, 0, wx.ALL | wx.LEFT | wx.ALIGN_CENTRE_VERTICAL, 5)
 
         self.radiusSpinBox = wx.SpinCtrlDouble(self, value="Radius (mm)", min=0.01, max=1000.0)
         self.radiusSpinBox.SetValue(3.0)
@@ -54,6 +67,9 @@ class FilletDialog(wx.Dialog):
     def OnClose(self, event):
         self.EndModal(0)
 
+    def OnUnitsChange(self, event):
+        self.options["units"] = self.unitsSelect.GetString(self.unitsSelect.GetSelection())
+
     def OnRadiusChange(self, event):
         self.options["radius"] = self.radiusSpinBox.GetValue()
 
@@ -65,7 +81,11 @@ class FilletDialog(wx.Dialog):
             progressDlg.Show()
             progressDlg.Pulse()
 
-            fillet_radius = int(self.options["radius"] * 1000000)
+            radius_multiplier = 1000000
+            if self.options["units"] == "in":
+                radius_multiplier *= 25.4
+
+            fillet_radius = int(self.options["radius"] * radius_multiplier)
             filletBoard(self.board, fillet_radius)
 
         except Exception as e:
