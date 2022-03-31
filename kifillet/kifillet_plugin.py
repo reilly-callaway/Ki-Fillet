@@ -30,6 +30,18 @@ class FilletDialog(wx.Dialog):
         self.Centre()
 
     def _buildOptions(self, parentSizer):
+        cutTypeBox = wx.BoxSizer(wx.HORIZONTAL)
+        
+        cutTypeText = wx.StaticText(self, label="Type:")
+        cutTypeBox.Add(cutTypeText, 0, wx.ALL | wx.LEFT | wx.ALIGN_CENTRE_VERTICAL, 5)
+
+        self.cutTypeSelect = wx.Choice(self, choices=["Fillet", "Chamfer"])
+        self.cutTypeSelect.SetSelection(0)
+        self.Bind(wx.EVT_CHOICE, self.OnCutTypeChange, id=self.cutTypeSelect.GetId())
+        cutTypeBox.Add(self.cutTypeSelect, 0, wx.ALL | wx.RIGHT | wx.ALIGN_CENTRE_VERTICAL | wx.EXPAND, 5)
+
+        parentSizer.Add(cutTypeBox, 0, wx.ALL | wx.EXPAND, 10)
+
         unitsBox = wx.BoxSizer(wx.HORIZONTAL)
 
         unitsText = wx.StaticText(self, label="Units:")
@@ -73,6 +85,9 @@ class FilletDialog(wx.Dialog):
     def OnRadiusChange(self, event):
         self.options["radius"] = self.radiusSpinBox.GetValue()
 
+    def OnCutTypeChange(self, event):
+        self.options["cut_type"] = self.cutTypeSelect.GetString(self.cutTypeSelect.GetSelection())
+
     def OnFillet(self, event):
         try:
             progressDlg = wx.ProgressDialog(
@@ -86,7 +101,8 @@ class FilletDialog(wx.Dialog):
                 radius_multiplier *= 25.4
 
             fillet_radius = int(self.options["radius"] * radius_multiplier)
-            filletBoard(self.board, fillet_radius)
+            isFillet = self.options["cut_type"] == "Fillet"
+            filletBoard(self.board, fillet_radius, isFillet)
 
         except Exception as e:
             dlg = wx.MessageDialog(
@@ -103,7 +119,7 @@ class KiFilletPlugin(pcbnew.ActionPlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # TODO: Store and load options
-        self.options = {"radius": 3.0}
+        self.options = {"radius": 3.0, "units": "mm", "cut_type": "Fillet"}
 
     def defaults(self):
         self.name = "Ki-Fillet"

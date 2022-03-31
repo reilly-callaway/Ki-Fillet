@@ -124,6 +124,24 @@ def addFillet(board, line1, line2, radius, touchingPoint):
 
     drawArc(board, arcCentre, start, end)
 
+def addChamfer(board, line1, line2, distance, touchingPoint):
+    """
+    
+    """
+    # Ensure the ends are at the touching point for consistency
+    if line1.GetStart() == touchingPoint:
+        flipLine(line1)
+    if line2.GetStart() == touchingPoint:
+        flipLine(line2)
+
+    # Shorten the lines, getting the direction as a vector that the line was reduced in
+    dirn1, start = shortenLine(line1, touchingPoint, distance)
+    dirn2, end = shortenLine(line2, touchingPoint, distance)
+
+    # Draw a line from start to end
+    line = makeLinesFromPoints([start, end], line1.GetWidth())[0]
+    board.Add(line)
+
 def makeLinesFromPoints(points, width, layer=pcbnew.Edge_Cuts):
     """
     Given a list of points, create a list of lines between them
@@ -180,14 +198,17 @@ def findBoardEdges(board):
     return lines
 
 
-def filletBoard(board, radius):
+def filletBoard(board, radius, useFillet=True):
     edges = findBoardEdges(board)
 
     for i in range(len(edges)):
         for j in range(i+1, len(edges)):
             point = findCoincidentPoint(edges[i], edges[j])
             if point:
-                addFillet(board, edges[i], edges[j], radius, point)
+                if useFillet:
+                    addFillet(board, edges[i], edges[j], radius, point)
+                else:
+                    addChamfer(board, edges[i], edges[j], radius, point)
 
 if __name__ == "__main__":
     import argparse
@@ -196,6 +217,7 @@ if __name__ == "__main__":
     parser.add_argument("board", help="Input .kicad_pcb file")
     parser.add_argument("-o", "--output", help="Output .kicad_pcb file. Will overwrite the input file if not specified")
     parser.add_argument("-r", "--radius", help="Radius of the corner edge", default=2.0, type=float)
+    parser.add_argument("-c", "--chamfer", help="Chamfer corner instead of fillet", action="store_true")
     parser.add_argument("-u", "--units", help="Units (mm, in)", default="mm", choices=["mm", "in"])
 
     args = parser.parse_args()
@@ -208,7 +230,7 @@ if __name__ == "__main__":
 
     board = pcbnew.LoadBoard(args.board)
 
-    filletBoard(board, fillet_radius)
+    filletBoard(board, fillet_radius, useFillet=(not args.chamfer))
 
     if (args.output):
         board.Save(args.output)
