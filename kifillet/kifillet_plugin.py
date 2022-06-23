@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import pcbnew
-import os
-import wx
+import os, wx
+import traceback
 from .kifillet import filletBoard
 
 UNITS = ["mm", "in"]
@@ -11,7 +11,7 @@ class FilletDialog(wx.Dialog):
     def __init__(self, parent=None, board=None, options=None):
         wx.Dialog.__init__(
             self, parent, title=f'Fillet board edges',
-            style=wx.DEFAULT_DIALOG_STYLE)
+            style=(wx.DEFAULT_DIALOG_STYLE | wx.DIALOG_NO_PARENT))
         self.Bind(wx.EVT_CLOSE, self.OnClose, id=self.GetId())
 
         self.board = board
@@ -88,6 +88,11 @@ class FilletDialog(wx.Dialog):
     def OnCutTypeChange(self, event):
         self.options["cut_type"] = self.cutTypeSelect.GetString(self.cutTypeSelect.GetSelection())
 
+    def GetSelected(self):
+        selected = [shape for shape in self.board.GetDrawings() if shape.IsSelected() and isinstance(shape, pcbnew.PCB_SHAPE)]
+
+        return selected
+
     def OnFillet(self, event):
         try:
             progressDlg = wx.ProgressDialog(
@@ -102,11 +107,16 @@ class FilletDialog(wx.Dialog):
 
             fillet_radius = int(self.options["radius"] * radius_multiplier)
             isFillet = self.options["cut_type"] == "Fillet"
-            filletBoard(self.board, fillet_radius, isFillet)
+
+            shapes = self.GetSelected()
+            if len(shapes) == 0:
+                shapes = None
+
+            filletBoard(self.board, fillet_radius, drawingSelection=shapes, useFillet=isFillet)
 
         except Exception as e:
             dlg = wx.MessageDialog(
-                None, f"Cannot perform:\n\n{e}", "Error", wx.OK)
+                None, f"Cannot perform:\n\n{e}\n\n{traceback.format_exc()}", "Error", wx.OK)
             dlg.ShowModal()
             dlg.Destroy()
         finally:
@@ -130,6 +140,7 @@ class KiFilletPlugin(pcbnew.ActionPlugin):
 
     def Run(self):
         try:
+            # TODO: Figure out how to select lines in pcbnew whilst dialog is open
             dialog = FilletDialog(None, pcbnew.GetBoard(), self.options)
             dialog.ShowModal()
         except Exception as e:

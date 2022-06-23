@@ -160,7 +160,7 @@ def makeLinesFromPoints(points, width, layer=pcbnew.Edge_Cuts):
         lines.append(seg)
     return lines
 
-def rectToLines(rect):
+def rectToLines(board, rect):
     """
     Given a wxRect, create a list of lines that make up the rectangle
     """
@@ -178,7 +178,7 @@ def rectToLines(rect):
 
     return lines
 
-def polygonToLines(polygon):
+def polygonToLines(board, polygon):
     """
     Given a wxPolygon, create a list of lines that make up the polygon
     """
@@ -201,16 +201,18 @@ def polygonToLines(polygon):
             lines.append(seg)
     board.Remove(polygon)
 
-def findBoardEdges(drawings):
+    return lines
+
+def findBoardEdges(board, drawings):
     lines = []
     for drawing in drawings:
         if isBoardEdge(drawing):
             # Rectangles
             if drawing.GetShape() == pcbnew.SHAPE_T_RECT:
-                lines.extend(rectToLines(drawing))
+                lines.extend(rectToLines(board, drawing))
             # Polygons
             elif drawing.GetShape() == pcbnew.SHAPE_T_POLY:
-                lines.extend(polygonToLines(drawing))
+                lines.extend(polygonToLines(board, drawing))
             # Line segments
             elif drawing.GetShape() == pcbnew.SHAPE_T_SEGMENT:
                 lines.append(drawing)
@@ -220,7 +222,7 @@ def filletBoard(board, radius, drawingSelection=None, useFillet=True):
     if drawingSelection is None:
         drawingSelection = board.GetDrawings()
 
-    edges = findBoardEdges(drawingSelection)
+    edges = findBoardEdges(board, drawingSelection)
 
     for i in range(len(edges)):
         for j in range(i+1, len(edges)):
