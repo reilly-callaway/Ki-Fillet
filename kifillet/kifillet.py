@@ -10,10 +10,10 @@ def findCoincidentPoint(line1, line2):
     # Find the coincident point
     if (line1.GetStartX() == line2.GetStartX() and line1.GetStartY() == line2.GetStartY()) or \
         (line1.GetStartX() == line2.GetEndX() and line1.GetStartY() == line2.GetEndY()):
-        return pcbnew.wxPoint(line1.GetStartX(), line1.GetStartY())
+        return pcbnew.VECTOR2I(line1.GetStartX(), line1.GetStartY())
     elif (line1.GetEndX() == line2.GetStartX() and line1.GetEndY() == line2.GetStartY()) or \
         (line1.GetEndX() == line2.GetEndX() and line1.GetEndY() == line2.GetEndY()):
-        return pcbnew.wxPoint(line1.GetEndX(), line1.GetEndY())
+        return pcbnew.VECTOR2I(line1.GetEndX(), line1.GetEndY())
     else:
         return None
 
@@ -21,10 +21,11 @@ def flipLine(line):
     startX = line.GetStartX()
     startY = line.GetStartY()
     line.SetStart(line.GetEnd())
-    line.SetEnd(pcbnew.wxPoint(startX, startY))
+    line.SetEnd(pcbnew.VECTOR2I(startX, startY))
 
 def shortenLine(line, touchingPoint, distance):
     # Force the touching point to be at the "end" of the line
+    
     if line.GetStart() == touchingPoint:
         flipLine(line)
 
@@ -47,12 +48,13 @@ def mag(point):
 
 def det(a, b):
     # Determinant of wxPoint (treasted as a vector)
+
     return (a.x * b.y) - (a.y * b.x)
 
 def norm_vector(point, length=1):
     # Return a new normalised wxPoint (treated as a vector)
     # Can optionally multiply by a const
-    return pcbnew.wxPoint(length * point.x / mag(point), length * point.y / mag(point))
+    return pcbnew.VECTOR2I(int(length * point.x / mag(point)), int(length * point.y / mag(point)))
 
 def findAngle(a, b):
     # Find the angle between two vectors
@@ -81,7 +83,7 @@ def drawArc(board, centre, start, end):
     arc.SetEnd(end)
 
     # Flip the start and end if the arc produced isn't the shortest possible
-    if round(findAngle(end - centre, start-centre)*10, 2) != round(arc.GetArcAngle(), 2):
+    if round(findAngle(end - centre, start-centre), 2) != round(arc.GetArcAngle().AsDegrees(), 2):
         arc.SetStart(end)
         arc.SetEnd(start)
 
@@ -118,7 +120,7 @@ def addFillet(board, line1, line2, radius, touchingPoint):
     rotDirn = sign(findAngleSigned(dirn1, dirn2))
     
     # Rotate 90 degrees, towards the end
-    dirn1Rot = pcbnew.wxPoint(rotDirn*dirn1.y, -1*rotDirn*dirn1.x)
+    dirn1Rot = pcbnew.VECTOR2I(rotDirn*dirn1.y, -1*rotDirn*dirn1.x)
 
     arcCentre = start + dirn1Rot
 
@@ -193,8 +195,8 @@ def polygonToLines(board, polygon):
     for outlineIndex in range(polyShape.OutlineCount()):
         outline = polyShape.Outline(outlineIndex)
         points = list(outline.CPoints())
-        # Convert to wxPoint from VECTOR2I
-        points = [pcbnew.wxPoint(p.x, p.y) for p in points]
+
+        # Re-add the first to fully enclose the shape
         points.append(points[0])
         for seg in makeLinesFromPoints(points, lineWidth):
             board.Add(seg)
@@ -218,8 +220,12 @@ def findBoardEdges(board, drawings):
                 lines.append(drawing)
     return lines
 
-def filletBoard(board, radius, drawingSelection=None, useFillet=True):
-    if drawingSelection is None:
+def filletBoard(board, radius, onlySelected=False, useFillet=True):
+    drawingSelection = []
+    
+    if onlySelected:
+        drawingSelection = [shape for shape in self.board.GetDrawings() if shape.IsSelected() and isinstance(shape, pcbnew.PCB_SHAPE)]
+    else:
         drawingSelection = board.GetDrawings()
 
     edges = findBoardEdges(board, drawingSelection)
@@ -233,7 +239,7 @@ def filletBoard(board, radius, drawingSelection=None, useFillet=True):
                 else:
                     addChamfer(board, edges[i], edges[j], radius, point)
 
-if __name__ == "__main__":
+def main():
     import argparse
     parser = argparse.ArgumentParser()
 
@@ -259,3 +265,6 @@ if __name__ == "__main__":
         board.Save(args.output)
     else:
         board.Save(args.board)
+
+if __name__ == "__main__":
+    main()

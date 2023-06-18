@@ -112,16 +112,22 @@ class FilletDialog(wx.Dialog):
             if len(shapes) == 0:
                 shapes = None
 
-            filletBoard(self.board, fillet_radius, drawingSelection=shapes, useFillet=isFillet)
+            filletBoard(self.board, fillet_radius, onlySelected=(shapes != None), useFillet=isFillet)
 
+            self.board.Save(self.board.GetFileName())
         except Exception as e:
-            dlg = wx.MessageDialog(
-                None, f"Cannot perform:\n\n{e}\n\n{traceback.format_exc()}", "Error", wx.OK)
+            import os
+            plugin_dir = os.path.dirname(os.path.realpath(__file__))
+            log_file = os.path.join(plugin_dir, 'ki_fillet_error.log')
+            with open(log_file, 'w') as f:
+                f.write(repr(e))
+            dlg = wx.MessageDialog(None, f"Cannot perform:\n\n{e}\n\n{traceback.format_exc()}", "Error", wx.OK)
             dlg.ShowModal()
             dlg.Destroy()
         finally:
             progressDlg.Hide()
             progressDlg.Destroy()
+
         pcbnew.Refresh()
         self.OnClose(None)
 
