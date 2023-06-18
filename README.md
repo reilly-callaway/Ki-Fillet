@@ -1,4 +1,7 @@
-# Ki-Fillet
+# KiCAD 7.0 now impliments this. Create your shapes on edge cuts -> Right click -> Fillet lines
+This plugin does still offer some additional functionality, such as the CLI, chamfers and unit conversion. The plugin is no longer worthwhile maintaining.
+
+# ~Ki-Fillet~
 ![Ki-Fillet Logo](https://github.com/reilly-callaway/ki-fillet/raw/master/resources/icon.png)
 
 KiCAD PcbNew Plugin and CLI to automatically apply a rounded fillet of a given radius to all board edges of a PCB.
