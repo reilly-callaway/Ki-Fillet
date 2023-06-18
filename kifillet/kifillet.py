@@ -4,7 +4,7 @@ import pcbnew
 import math
 
 def isBoardEdge(edge):
-    return isinstance(edge, pcbnew.PCB_SHAPE) and edge.GetLayerName() == "Edge.Cuts"
+    return edge.ClassOf(pcbnew.PCB_SHAPE()) and edge.GetLayerName() == "Edge.Cuts"
 
 def findCoincidentPoint(line1, line2):
     # Find the coincident point
@@ -224,7 +224,7 @@ def filletBoard(board, radius, onlySelected=False, useFillet=True):
     drawingSelection = []
     
     if onlySelected:
-        drawingSelection = [shape for shape in self.board.GetDrawings() if shape.IsSelected() and isinstance(shape, pcbnew.PCB_SHAPE)]
+        drawingSelection = [shape for shape in board.GetDrawings() if shape.IsSelected() and isinstance(shape, pcbnew.PCB_SHAPE)]
     else:
         drawingSelection = board.GetDrawings()
 
